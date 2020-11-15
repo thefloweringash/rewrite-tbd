@@ -67,35 +67,39 @@ static void display_errors(const rewrite_config &cfg, const std::string &path, c
 
 static void rewrite_file(const rewrite_config &cfg, const std::string &path, bool dryRun) {
     auto inputFile = std::unique_ptr<FILE, close_file>{fopen(path.c_str(), "r")};
+    auto temporaryName = path + ".rewrite.tmp";
 
     if (!inputFile) {
         throw std::runtime_error{std::string{"opening input file: "} + strerror(errno)};
     }
 
+    FILE *outputFile;
+    if (!dryRun) {
+        outputFile = fopen(temporaryName.c_str(), "w");
+        if (!outputFile) {
+            throw std::runtime_error{std::string{"opening output file"} + strerror(errno)};
+        }
+    }
+
     yaml_parser_wrapper parser;
     yaml_parser_set_input_file(&parser.yaml_parser, inputFile.get());
-    yaml_document_wrapper document{&parser.yaml_parser};
 
-    auto result = cfg.rewrite(&document.yaml_document);
+    while (!feof(inputFile.get())) {
+        yaml_document_wrapper document{&parser.yaml_parser};
 
-    if (result.failed()) {
-        display_errors(cfg, path, result);
-        throw rewrite_errors{"Rewriting failed"};
+        auto result = cfg.rewrite(&document.yaml_document);
+
+        if (result.failed()) {
+            display_errors(cfg, path, result);
+            throw rewrite_errors{"Rewriting failed"};
+        }
+
+        emit_yaml(&document.yaml_document, dryRun ? stdout : outputFile);
     }
 
     if (dryRun) {
-        emit_yaml(&document.yaml_document, stdout);
         return;
     }
-
-    auto temporaryName = path + ".rewrite.tmp";
-
-    auto outputFile = fopen(temporaryName.c_str(), "w");
-    if (!outputFile) {
-        throw std::runtime_error{std::string{"opening output file"} + strerror(errno)};
-    }
-
-    emit_yaml(&document.yaml_document, outputFile);
 
     if (fclose(outputFile) != 0) {
         throw std::runtime_error{std::string{"closing output file"} + strerror(errno)};
