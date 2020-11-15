@@ -8,8 +8,18 @@
 #include "yaml.h"
 #include "tbdv4.h"
 
-static bool starts_with(const std::string &needle, const std::string &haystack) {
-    return haystack.find(needle) == 0;
+static bool starts_with(const std::string &prefix, const std::string &str) {
+    if (str.length() < prefix.length()) {
+        return false;
+    }
+    return str.compare(0, prefix.length(), prefix) == 0;
+}
+
+static bool ends_with(const std::string &suffix, const std::string &str) {
+    if (str.length() < suffix.length()) {
+        return false;
+    }
+    return str.compare(str.length() - suffix.length(), suffix.length(), suffix) == 0;
 }
 
 static std::optional<std::string> map_library_path(const rewrite_config &cfg, const std::string &entry) {
@@ -25,6 +35,37 @@ static std::optional<std::string> map_library_path(const rewrite_config &cfg, co
     }
 
     return {};
+}
+
+static bool target_exists(const std::string &replacement) {
+    struct stat st{};
+
+    // The literal file is present, accept immediately.
+    if (stat(replacement.c_str(), &st) == 0) {
+        return true;
+    }
+
+    // Framework style
+    // tbd file refers to /S/L/F/Foo.framework/Foo
+    // resolved file is at /S/L/F/Foo.framework/Foo.tbd
+    if (!ends_with(".tbd", replacement)) {
+        if (stat((replacement + ".tbd").c_str(), &st) == 0) {
+            return true;
+        }
+    }
+
+    // dylib style
+    // tbd file refers to /usr/lib/libfoo.dylib
+    // resolved file is at /usr/lib/libfoo.tbd
+    std::string suffix = ".dylib";
+    if (ends_with(suffix, replacement)) {
+        std::string dylibTbd = replacement.substr(0, replacement.length() - suffix.length()) + ".tbd";
+        if (stat(dylibTbd.c_str(), &st) == 0) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 static void rewrite_library_path(rewrite_result *result, const rewrite_config &cfg, yaml_node_t *lib_node) {
@@ -47,8 +88,7 @@ static void rewrite_library_path(rewrite_result *result, const rewrite_config &c
     lib_node->data.scalar.length = replacement->length();
 
     if (cfg.checkExistence) {
-        struct stat st{};
-        if (stat(replacement->c_str(), &st) != 0) {
+        if (!target_exists(*replacement)) {
             result->nonExistentPaths.push_back(*replacement);
         }
     }
