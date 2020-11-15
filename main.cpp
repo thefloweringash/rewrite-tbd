@@ -30,7 +30,7 @@ static std::pair<std::string, std::string> parse_mapping(const std::string &inpu
 static void emit_yaml(yaml_document_t *document, FILE *to) {
     yaml_emitter_wrapper emitter;
 
-    yaml_emitter_set_output_file(&emitter.yaml_emitter, stdout);
+    yaml_emitter_set_output_file(&emitter.yaml_emitter, to);
 
     if (!yaml_emitter_dump(&emitter.yaml_emitter, document)) {
         throw std::runtime_error{"Failed to  dump yaml"};
