@@ -15,3 +15,5 @@ target_link_libraries(rewrite-tbd
         PRIVATE
         PkgConfig::LIBYAML
         )
+
+install(TARGETS rewrite-tbd)

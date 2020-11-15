@@ -2,20 +2,16 @@ let
   pkgs = import <nixpkgs> {};
   inherit (pkgs)  lib;
 
-  drv = { stdenv, cmake, pkg-config, libyaml, bootstrap ? false }: stdenv.mkDerivation {
+  drv = { stdenv, cmake, pkg-config, libyaml, bootstrap ? false }: stdenv.mkDerivation ({
     name = "rewrite-tbd";
     src = lib.sourceFilesBySuffices ./. [".h" ".cpp" "CMakeLists.txt" "Makefile.boot"];
 
     nativeBuildInputs = [ pkg-config ] ++ lib.optionals (!bootstrap) [ cmake ];
     buildInputs = [ libyaml ];
-
-    makefile = if bootstrap then "Makefile.boot" else null;
-
-    installPhase = ''
-      mkdir -p $out/bin
-      cp rewrite-tbd $out/bin
-    '';
-  };
+  } // lib.optionalAttrs bootstrap {
+    makefile = "Makefile.boot";
+    makeFlags = "PREFIX=${placeholder "out"}";
+  });
 in
 rec {
   full = pkgs.callPackage drv {};

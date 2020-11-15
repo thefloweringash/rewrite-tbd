@@ -8,3 +8,7 @@ LDFLAGS := $(shell pkg-config --libs yaml-0.1)
 
 rewrite-tbd: $(OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $^
+
+install: rewrite-tbd
+	mkdir -p $(PREFIX)/bin
+	cp $^ $(PREFIX)/bin
