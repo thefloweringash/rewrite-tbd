@@ -84,8 +84,12 @@ static void rewrite_file(const rewrite_config &cfg, const std::string &path, boo
     yaml_parser_wrapper parser;
     yaml_parser_set_input_file(&parser.yaml_parser, inputFile.get());
 
-    while (!feof(inputFile.get())) {
+    while (true) {
         yaml_document_wrapper document{&parser.yaml_parser};
+
+        if (!yaml_document_get_root_node(&document.yaml_document)) {
+            break;
+        }
 
         auto result = cfg.rewrite(&document.yaml_document);
 
