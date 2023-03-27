@@ -1,6 +1,8 @@
 #ifndef REWRITE_TBD_TBDV4_H
 #define REWRITE_TBD_TBDV4_H
 
+#include <functional>
+
 #include <yaml.h>
 #include "rewrite.h"
 
